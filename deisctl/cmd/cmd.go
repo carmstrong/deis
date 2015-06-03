@@ -147,25 +147,18 @@ func startDefaultServices(b backend.Backend, wg *sync.WaitGroup, outchan chan st
 
 	// wait for groups to come up
 	outchan <- fmt.Sprintf("Storage subsystem...")
-	b.Start([]string{"store-monitor"}, wg, outchan, errchan)
-	wg.Wait()
-	b.Start([]string{"store-daemon"}, wg, outchan, errchan)
-	wg.Wait()
-	b.Start([]string{"store-metadata"}, wg, outchan, errchan)
-	wg.Wait()
+	startServices([]string{"store-monitor"}, b, wg, outchan, errchan)
+	startServices([]string{"store-daemon"}, b, wg, outchan, errchan)
+	startServices([]string{"store-metadata"}, b, wg, outchan, errchan)
 
 	// we start gateway first to give metadata time to come up for volume
-	b.Start([]string{"store-gateway@*"}, wg, outchan, errchan)
-	wg.Wait()
-	b.Start([]string{"store-volume"}, wg, outchan, errchan)
-	wg.Wait()
+	startServices([]string{"store-gateway@*"}, b, wg, outchan, errchan)
+	startServices([]string{"store-volume"}, b, wg, outchan, errchan)
 
 	// start logging subsystem first to collect logs from other components
 	outchan <- fmt.Sprintf("Logging subsystem...")
-	b.Start([]string{"logger"}, wg, outchan, errchan)
-	wg.Wait()
-	b.Start([]string{"logspout"}, wg, outchan, errchan)
-	wg.Wait()
+	startServices([]string{"logger"}, b, wg, outchan, errchan)
+	startServices([]string{"logspout"}, b, wg, outchan, errchan)
 
 	b.Start([]string{
 		"database", "registry@*", "controller", "builder",
@@ -173,18 +166,23 @@ func startDefaultServices(b backend.Backend, wg *sync.WaitGroup, outchan chan st
 		&_wg, _outchan, _errchan)
 
 	outchan <- fmt.Sprintf("Control plane...")
-	b.Start([]string{"database", "registry@*", "controller"}, wg, outchan, errchan)
-	wg.Wait()
-	b.Start([]string{"builder"}, wg, outchan, errchan)
-	wg.Wait()
+	startServices([]string{"database", "registry@*", "controller"}, b, wg, outchan, errchan)
+	startServices([]string{"builder"}, b, wg, outchan, errchan)
 
 	outchan <- fmt.Sprintf("Data plane...")
-	b.Start([]string{"publisher"}, wg, outchan, errchan)
-	wg.Wait()
+	startServices([]string{"publisher"}, b, wg, outchan, errchan)
 
 	outchan <- fmt.Sprintf("Routing mesh...")
-	b.Start([]string{"router@*"}, wg, outchan, errchan)
+	startServices([]string{"router@*"}, b, wg, outchan, errchan)
+}
+
+func startServices(services []string, b backend.Backend, wg *sync.WaitGroup, outchan chan string, errchan chan error) {
+	outchan <- fmt.Sprintf("INFO: Starting %v...", services)
+	t0 := time.Now()
+	b.Start(services, wg, outchan, errchan)
 	wg.Wait()
+	t1 := time.Now()
+	outchan <- fmt.Sprintf("INFO: %v took %v to start", services, t1.Sub(t0))
 }
 
 // Stop deactivates the specified components.

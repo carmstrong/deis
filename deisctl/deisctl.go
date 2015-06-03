@@ -42,6 +42,7 @@ Commands, use "deisctl help <command>" to learn more:
   help              show the help screen for a command
 
 Options:
+  --benchmark-start						prints time taken to start platform
   -h --help                   show this help screen
   --endpoint=<url>            etcd endpoint for fleet [default: http://127.0.0.1:4001]
   --etcd-cafile=<path>        etcd CA file authentication [default: ]
@@ -136,6 +137,7 @@ func isGlobalArg(arg string) bool {
 		"--ssh-timeout=",
 		"--strict-host-key-checking=",
 		"--tunnel=",
+		"--benchmark-start=",
 	}
 	for _, p := range prefixes {
 		if strings.HasPrefix(arg, p) {
